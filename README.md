@@ -6,7 +6,7 @@ A simple mvvm implementation based on Vue for learning
 1 `mvvm.js` is the core , it has two other classes `Watcher`, `Dep` and an observe function.
 
 `Watcher` is responsible to call `update` function. The `update` 
-function will update the  DOM by diff Virtual DOM.
+function will update the  DOM.
 
 `Dep` is responsible to collect all `Watcher`s, namely depencencies.
 
