@@ -39,6 +39,7 @@ class MVVM {
     }
     updateComponent() {
         let prevNode = this.prevNode
+        // 返回虚拟DOM。其实就是一个JS对象。
         let vnode = this.render.call(this);
         this.prevNode = vnode
         // init render
@@ -52,6 +53,8 @@ class MVVM {
         }
         // diff & patch
         else {
+            // patch方法会通过diff算法。比较两个虚拟DOM树的差异。
+            // 然后更新到浏览器
             this.vdom.patch(prevNode, vnode, this.el);
         }
     }
