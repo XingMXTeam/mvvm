@@ -1,5 +1,5 @@
-# mvvm
-A simple mvvm implementation based on Vue for learning
+# simpleVue
+A simple vue implementation for learning
 
 ## intro
 
