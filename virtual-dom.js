@@ -145,6 +145,14 @@ class VDOM {
             nodeOps.appendChild(vnode.elm, nodeOps.createTextNode(String(vnode.text)));
         }
     }
+    /**
+     * 批量添加节点
+     * @param {Element} parentElm 
+     * @param {*} refElm 
+     * @param {*} vnodes 
+     * @param {*} startIdx 
+     * @param {*} endIdx 
+     */
     addVnodes(parentElm, refElm, vnodes, startIdx, endIdx) {
         for (; startIdx <= endIdx; ++startIdx) {
             this.createElm(vnodes[startIdx], parentElm, refElm);
