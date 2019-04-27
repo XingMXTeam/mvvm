@@ -9,10 +9,12 @@ const Util = {
         return _toString.call(obj) === '[object Object]'
     },
     toString(val) {
-        return val == null
-            ? ''
-            : Array.isArray(val) || (Util.isPlainObject(val) && val.toString === _toString)
-                ? JSON.stringify(val, null, 2)
-                : String(val)
+        return val == null ?
+            '' :
+            Array.isArray(val) || (Util.isPlainObject(val) && val.toString === _toString) ?
+            JSON.stringify(val, null, 2) :
+            String(val)
     }
 }
+
+export default Util
