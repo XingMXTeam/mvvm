@@ -40,15 +40,15 @@ to AST which is a javascript object. A `vnode` is like this:
 
 ```
 
-`generate` step will make the AST to a `render` function which is used to create Virtual DOM Tree(A javascript object). `render` function handle `component` tag
+`generate` step will make the AST to a `render` function which is used to create Virtual DOM Tree(A javascript object). AST will collect all informations on DOM node: v-show、v-if、v-for、@click and so on. `render` function handle `component` tag
 as a normal element or node, but it will collect `component options`.
 
 3 `virtual-dom.js`
 
 The `render` function will use `virtual-dom`'s methods to make virtual DOM recursively.
 
-Also Need to know that, `createElm` method in `virtual-dom.js` will add
-event listener to `vnode`.
+`createElm` method in `virtual-dom.js` will add real event listener handler to `vnode`. If the `tag` is `component`,  `createElm` will create component, which
+will trigger the component's `render` method be called.
 
 When the DOM is ready by init,  and some mutation happend by Events
 or change the `data` directly. The `patch` method will be called.
