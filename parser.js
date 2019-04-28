@@ -10,7 +10,7 @@ class Parser {
         this.Reg_singleAttrIdentifier = /([^\s"'<>/=]+)/
         this.Reg_singleAttrAssign = /(?:=)/
         this.Reg_singleAttrValues = [
-            /"([^"]*)"+/.source,//
+            /"([^"]*)"+/.source, //
             /'([^']*)'+/.source,
             /([^\s"'=<>`]+)/.source
         ]
@@ -195,8 +195,8 @@ class Parser {
             }
         })
     }
-    processFor(elm) { }
-    processIf(elm) { }
+    processFor(elm) {}
+    processIf(elm) {}
     isStatic(node) {
         // 表达式
         if (node.type === 2) {
@@ -226,9 +226,9 @@ class Parser {
     markStaticRoots(node) {
         if (node.type === 1) {
             if (node.static && node.children.length && !(
-                node.children.length === 1 &&
-                node.children[0].type === 3
-            )) {
+                    node.children.length === 1 &&
+                    node.children[0].type === 3
+                )) {
                 node.staticRoot = true;
                 return;
             } else {
@@ -240,16 +240,20 @@ class Parser {
         this.markStatic(this.root);
         this.markStaticRoots(this.root);
     }
+    // 将AST 转换为 render字符串 
     generate() {
         function genText(el) {
             return `_v(${el.type === 2 ? el.expression : JSON.stringify(el.text)})`;
         }
+
         function genIf(el) {
 
         }
+
         function genFor(el) {
 
         }
+
         function genNode(el) {
             if (el.type === 1) {
                 return genElement(el);
@@ -257,6 +261,7 @@ class Parser {
                 return genText(el);
             }
         }
+
         function genChildren(el) {
             const children = el.children;
 
@@ -264,6 +269,7 @@ class Parser {
                 return `[${children.map(genNode).join(',')}]`;
             }
         }
+
         function genData(el) {
             if (el.events) {
                 Object.keys(el.events).forEach(name => {
@@ -273,6 +279,7 @@ class Parser {
             }
             return el.data
         }
+
         function genElement(el) {
             if (el.if && !el.ifProcessed) {
                 return genIf(el);
@@ -284,18 +291,16 @@ class Parser {
                 let code;
                 code = `_c('${el.tag}'${data ? ("," + data) : ''
                     } ${children ? ("," + children) : ''})`
-                // code = `_c('${el.tag}', {
-                //     staticClass: ${el.attrsMap && el.attrsMap[':class']},
-                //     class: ${el.attrsMap && el.attrsMap['class']},
-                // }${
-                //     children ? `,${children}` : ''
-                //     })`
                 return code;
             }
         }
         const code = this.root ? genElement(this.root) : '_c("div")'
+        // counter是组件
+        // with(this){return _c('div',{attrs:{"id":"app"}},[_c('counter')],1)}
         return {
             render: `with(this){return ${code}}`,
         }
     }
 }
+
+export default Parser

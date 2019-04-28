@@ -1,3 +1,4 @@
+import Util from './util.js'
 // 多平台适配
 const nodeOps = {
     setTextContent(node, text) {
@@ -40,13 +41,22 @@ const nodeOps = {
 
 // VNode
 class VNode {
-    constructor({ tag, data, children, text, elm, context }) {
+    constructor({
+        tag,
+        data,
+        children,
+        text,
+        elm,
+        context,
+        componentOptions
+    } = {}) {
         this.tag = tag;
         this.data = data;
         this.children = children;
         this.text = text;
         this.elm = elm;
         this.context = context
+        this.componentOptions = componentOptions
     }
 }
 // VDOM
@@ -83,7 +93,9 @@ class VDOM {
         return new VNode(options)
     }
     createTextVNode(val) {
-        return new VNode({ text: String(val) });
+        return new VNode({
+            text: String(val)
+        });
     }
     createEmptyVNode() {
         const node = new VNode();
@@ -104,6 +116,7 @@ class VDOM {
             }
         }
     }
+    // ref是第一个兄弟节点。插在第一个兄弟节点的前面。
     insert(parent, elm, ref) {
         if (parent) {
             if (ref) {
@@ -115,13 +128,27 @@ class VDOM {
             }
         }
     }
+    createComponent(vnode, parentElm, refElm) {
+        if (!vnode.data) return false
+        const hooks = vnode.data.hooks
+        if (hooks && hooks.init) {
+            hooks.init(vnode)
+            vnode.elm = vnode.componentInstance.elm;
+            this.insert(parentElm, vnode.elm, refElm)
+            return true
+        }
+        return false
+    }
     createElm(vnode, parentElm, refElm) {
+        // 创建组件
+        if (this.createComponent(vnode, parentElm, refElm)) return
+        // 创建普通节点
         if (vnode.tag) {
             vnode.elm = nodeOps.createElement(vnode.tag)
 
             // 绑定事件
             if (Util.isDef(vnode.data)) {
-                let obj = vnode.data['on']
+                let obj = vnode.data['on'] || {}
                 Object.keys(obj).forEach(name => {
                     vnode.elm.addEventListener(name, e => {
                         obj[name].call(vnode.context, e)
@@ -170,21 +197,35 @@ class VDOM {
         return cloneVnode;
     }
     emptyNodeAt(elm) {
-        return new VNode({ tag: nodeOps.tagName(elm).toLowerCase(), data: {}, children: [], text: undefined, elm })
+        return new VNode({
+            tag: nodeOps.tagName(elm).toLowerCase(),
+            data: {},
+            children: [],
+            text: undefined,
+            elm
+        })
     }
-    patch(oldVnode, vnode, parentElm) {
+    patch(oldVnode, newVnode, parentElm) {
+        if (!newVnode) return
+
         if (!oldVnode) {
-            this.addVnodes(parentElm, null, vnode, 0, vnode.length - 1);
-        } else if (!vnode) {
-            this.removeVnodes(parentElm, oldVnode, 0, oldVnode.length - 1);
-        } else {
-            if (this.sameVnode(oldVnode, vnode)) {
-                this.patchVnode(oldVnode, vnode);
-            } else {
-                this.removeVnodes(parentElm, oldVnode, 0, oldVnode.length - 1);
-                this.addVnodes(parentElm, null, vnode, 0, vnode.length - 1);
-            }
+            this.createElm(newVnode)
         }
+        // 普通节点或者not same
+        else if (oldVnode.nodeType || !this.sameVnode(oldVnode, newVnode)) {
+            if (oldVnode.nodeType) {
+                // 返回一个虚拟节点
+                oldVnode = this.emptyNodeAt(oldVnode);
+            }
+            const oldElm = oldVnode.elm
+            const parentElm = nodeOps.parentNode(oldElm)
+            this.createElm(newVnode, parentElm, nodeOps.nextSibling(oldElm))
+        }
+        // 虚拟节点，并且是相同类型节点
+        else {
+            this.patchVnode(oldVnode, newVnode);
+        }
+        return newVnode.elm
     }
     patchVnode(oldVnode, vnode) {
         if (oldVnode === vnode) {
@@ -280,3 +321,5 @@ class VDOM {
         }
     }
 }
+
+export default VDOM

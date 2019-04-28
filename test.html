@@ -1,14 +1,13 @@
-<script src="util.js"></script>
-<script src="virtual-dom.js"></script>
-<script src="parser.js"></script>
-<script src="mvvm.js"></script>
-<div id="app"></div>
-<script>
+<div id="app">
+    <counter />
+</div>
+<script type="module">
+    import MVVM from './mvvm.js'
+    import counter from './counter.js'
     new MVVM({
         el: '#app',
-        data: {
-            count: 0
-        },
-        template: `<div>{{count}}<button @click="count++">increment</button></div>`
+        components: {
+            counter
+        }
     })
 </script>

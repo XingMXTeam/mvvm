@@ -1,30 +1,58 @@
+// const isComp = Symbol('isComponent')
+import VDOM from './virtual-dom.js'
+import Parser from './parser.js'
+import Util from './util.js'
+
+const vdom = new VDOM()
+
 class MVVM {
     constructor(options) {
+        this.init(options)
+    }
+    init(options) {
         this.options = options;
+        this._base = MVVM
         Object.assign(this, options);
         Object.assign(this, options.data);
+        if (typeof options.data == 'function') {
+            this.data = options.data.call(this)
+        } else {
+            this.data = options.data
+        }
         this.el = options.el;
-        this.parser = new Parser(this.$mount(options))
-        this.vdom = new VDOM()
+        this.parser = new Parser(this.$mount())
+
         this.addHelper()
         this.prevNode = null
 
         // make data reactivity
-        observe(options.data)
-        this.proxy(options)
+        observe(this.data)
+        this.proxy(this.data)
 
-        // compile tempate
+        // compile tempate to ast
         this.code = this.parser.generate();
+        // ast to render function
         this.render = this.createFunction(this.code.render)
 
-        // add a init watcher
+        // add an init watcher
         new Watcher(_ => {
             this.updateComponent()
         })
     }
+    static extend(options) {
+        const Parent = this
+        let Child = function (options) {
+            this.init(options)
+        }
+        // 构造函数才有prototype
+        Child.prototype = Object.create(Parent.prototype)
+        Child.prototype.constructor = Parent
+        Child.options = {}
+        Object.assign(Child.options, options)
+        return Child
+    }
     // 访问MVVM实例上的数据时 代理到data上。从而实现，修改this.count data的count有reactivity
-    proxy(options) {
-        let data = options.data
+    proxy(data = {}) {
         let that = this
         Object.keys(data).forEach(key => {
             Object.defineProperty(that, key, {
@@ -39,30 +67,29 @@ class MVVM {
     }
     updateComponent() {
         let prevNode = this.prevNode
-        // 返回虚拟DOM。其实就是一个JS对象。
+        // 执行完render方法才返回完整的DOM树。返回虚拟DOM。其实就是一个JS对象。
         let vnode = this.render.call(this);
         this.prevNode = vnode
         // init render
         if (!prevNode) {
-            // create an empty node and replace it
-            let oldVnode = this.vdom.emptyNodeAt(nodeOps.getElementById(this.el.replace(/#/, '')));
-            // replacing existing element
-            var oldElm = oldVnode.elm;
-            var parentElm = nodeOps.parentNode(oldElm);
-            this.vdom.createElm(vnode, parentElm, nodeOps.nextSibling(oldElm));
+            this.elm = vdom.patch(document.querySelector(this.el), vnode)
         }
         // diff & patch
         else {
             // patch方法会通过diff算法。比较两个虚拟DOM树的差异。
             // 然后更新到浏览器
-            this.vdom.patch(prevNode, vnode, this.el);
+            this.elm = vdom.patch(prevNode, vnode, this.el);
         }
     }
-    $mount(options) {
-        if (options.template) {
-            return options.template
+    $mount() {
+        if (this.options.template) {
+            return this.options.template.trim()
         } else {
-            return document.querySelector(options.el)
+            if (this.options.el) {
+                return document.querySelector(this.options.el).outerHTML
+            } else {
+                //...
+            }
         }
     }
     createFunction(code) {
@@ -75,22 +102,51 @@ class MVVM {
     addHelper() {
         this._s = Util.toString
         this._c = this.createElement.bind(this)
-        this._v = this.vdom.createTextVNode.bind(this.vdom)
-        this._e = this.vdom.createEmptyVNode.bind(this.vdom)
+        this._v = vdom.createTextVNode.bind(vdom)
+        this._e = vdom.createEmptyVNode.bind(vdom)
+    }
+    isComp(tag) {
+        const asset = this.options.components
+        if (!asset) return false
+        return asset[tag]
+    }
+    // 模版中有组件的时候，进行组件的实例化
+    installComponentHooks(data) {
+        data.hooks = {
+            init(vnode) {
+                const child = vnode.componentInstance = new vnode.componentOptions.ctor(vnode.componentOptions)
+                child.$mount(vnode.elm)
+            }
+        }
     }
     createElement(tag, data, children, normalizationType, context) {
-        return this.vdom.createVNode({
-            tag: tag,
-            data: Array.isArray(data) ? undefined : data,
+        const params = {
+            tag,
+            data: Array.isArray(data) ? {} : data,
             children: children || data,
             text: undefined,
             el: undefined,
             context: context ? context : this
-        });
+        }
+        let ctor
+        if (ctor = this.isComp(tag)) {
+            const options = Object.assign({}, ctor)
+            this.installComponentHooks(params.data)
+            if (typeof ctor == 'object') {
+                ctor = MVVM.extend(ctor)
+            }
+            return vdom.createVNode(Object.assign(params, {
+                tag: `vue-component-${ctor.id}-${name}`,
+                componentOptions: Object.assign(options, {
+                    ctor
+                })
+            }))
+        }
+        return vdom.createVNode(params);
     }
 }
 
-const observe = function (obj) {
+const observe = function (obj = {}) {
     Object.keys(obj).forEach(key => {
         let v = obj[key];
         let dep = new Dep();
@@ -149,3 +205,5 @@ class Dep {
 //     }
 //     wrapperUpdate()
 // }
+
+export default MVVM
