@@ -24,7 +24,7 @@ const nodeOps = {
         return el.parentNode
     },
     removeChild(parent, elm) {
-        return parent.removeChild(elem)
+        return parent.removeChild(elm)
     },
     nextSibling(el) {
         return el.nextSibling
@@ -220,6 +220,9 @@ class VDOM {
             const oldElm = oldVnode.elm
             const parentElm = nodeOps.parentNode(oldElm)
             this.createElm(newVnode, parentElm, nodeOps.nextSibling(oldElm))
+            if (parentElm) {
+                this.removeVnodes(parentElm, [oldVnode], 0, 0);
+            }
         }
         // 虚拟节点，并且是相同类型节点
         else {

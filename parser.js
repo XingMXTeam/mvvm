@@ -30,7 +30,7 @@ class Parser {
 
         // 解析模板
         this.index = 0;
-        this.parseTemplate();
+        this.root = this.parseTemplate();
         this.optimize();
     }
     // attrs 转换成 map 
@@ -149,7 +149,11 @@ class Parser {
         }
 
         if (pos >= 0) {
-            this.currentParent = this.stack[pos];
+            if (pos > 0) {
+                this.currentParent = this.stack[pos - 1]
+            } else {
+                this.currentParent = null
+            }
             // 出栈
             this.stack.length = pos;
         }

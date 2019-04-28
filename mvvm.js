@@ -10,16 +10,18 @@ class MVVM {
         this.init(options)
     }
     init(options) {
-        this.options = options;
-        this._base = MVVM
+        // this.options = options;
         Object.assign(this, options);
-        Object.assign(this, options.data);
+
         if (typeof options.data == 'function') {
             this.data = options.data.call(this)
         } else {
             this.data = options.data
         }
-        this.el = options.el;
+        // 响应式时必须的
+        Object.assign(this, this.data);
+
+        // compile tempate to AST
         this.parser = new Parser(this.$mount())
 
         this.addHelper()
@@ -29,10 +31,9 @@ class MVVM {
         observe(this.data)
         this.proxy(this.data)
 
-        // compile tempate to ast
-        this.code = this.parser.generate();
-        // ast to render function
-        this.render = this.createFunction(this.code.render)
+        // compile AST to render function
+        const code = this.parser.generate();
+        this.render = this.createFunction(code.render)
 
         // add an init watcher
         new Watcher(_ => {
@@ -82,14 +83,10 @@ class MVVM {
         }
     }
     $mount() {
-        if (this.options.template) {
-            return this.options.template.trim()
-        } else {
-            if (this.options.el) {
-                return document.querySelector(this.options.el).outerHTML
-            } else {
-                //...
-            }
+        if (this.template) {
+            return this.template.trim()
+        } else if (this.el) {
+            return document.querySelector(this.el).outerHTML
         }
     }
     createFunction(code) {
@@ -106,18 +103,19 @@ class MVVM {
         this._e = vdom.createEmptyVNode.bind(vdom)
     }
     isComp(tag) {
-        const asset = this.options.components
+        const asset = this.components
         if (!asset) return false
         return asset[tag]
     }
     // 模版中有组件的时候，进行组件的实例化
-    installComponentHooks(data) {
-        data.hooks = {
+    installComponentHooks() {
+        const hooks = {
             init(vnode) {
                 const child = vnode.componentInstance = new vnode.componentOptions.ctor(vnode.componentOptions)
                 child.$mount(vnode.elm)
             }
         }
+        return hooks
     }
     createElement(tag, data, children, normalizationType, context) {
         const params = {
@@ -131,12 +129,13 @@ class MVVM {
         let ctor
         if (ctor = this.isComp(tag)) {
             const options = Object.assign({}, ctor)
-            this.installComponentHooks(params.data)
+            if (!params.data) params.data = {}
+            params.data.hooks = this.installComponentHooks()
             if (typeof ctor == 'object') {
                 ctor = MVVM.extend(ctor)
             }
             return vdom.createVNode(Object.assign(params, {
-                tag: `vue-component-${ctor.id}-${name}`,
+                tag: `vue-component-${ctor.id}-${options.name}`,
                 componentOptions: Object.assign(options, {
                     ctor
                 })
@@ -168,10 +167,8 @@ const observe = function (obj = {}) {
 }
 class Watcher {
     constructor(update) {
-        // this.active = false;
         this.updateFn = update;
         Dep.target = this;
-        // first run
         this.update();
     }
     update() {
@@ -187,23 +184,10 @@ class Dep {
         if (Dep.target) {
             this.subscribers.add(Dep.target)
         }
-        // if (activeUpdate) {
-        //     this.subscribers.add(activeUpdate)
-        // }
     }
     notify() {
         this.subscribers.forEach(subs => subs.update())
     }
 }
-
-// let activeUpdate
-// const autorun = function (update) {
-//     const wrapperUpdate = function () {
-//         activeUpdate = update
-//         update()
-//         activeUpdate = null
-//     }
-//     wrapperUpdate()
-// }
 
 export default MVVM
